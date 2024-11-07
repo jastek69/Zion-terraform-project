@@ -1,55 +1,43 @@
 provider "aws" {
-    region = ""
-    access_key = ""
-    secret_key = ""
+    region = "us-west-1"
 }
 
-variable "subnet_cidr_block"{
-    description = "subnet cidr block"
-}
+variable vpc_cidr_block {}
+variable subnet_cidr_block{}
+variable avail_zone {}
+variable env_prefix{}
 
-variable "vpc_cidr_block"{
-    description = "vpc cidr block"
-}
-
-variable "environment" {
-    description = "deployment environment"
-}
-
-
-resource "aws_vpc" "development-vpc"{
+resource "aws_vpc" "myapp-vpc"{
     cidr_block = var.vpc_cidr_block
     tags = {
-        Name: "development"
+        Name: "${var.env_prefix}-vpc"
     }
 }
 
-resource "aws_subnet" "dev-subnet-1"{
-    vpc_id = aws_vpc.development-vpc.id
+resource "aws_subnet" "myapp-subnet-1"{
+    vpc_id = aws_vpc.myapp-vpc.id
     cidr_block = var.subnet_cidr_block
-    availability_zone = "us-west-1a"
+    availability_zone = var.avail_zone
     tags = {
-        Name: "subnet-1-dev"
+        Name: "${var.env_prefix}-subnet-1"
     }
 }
 
-data "aws_vpc" "existing_vpc" {
-     default = true
-}
+resource "aws_route_table" "myapp-aws_route_table" {
+    vpc_id = aws_vpc.myapp-vpc.id
 
-resource "aws_subnet" "dev-subnet-2"{
-    vpc_id = data.aws_vpc.existing_vpc.id
-    cidr_block = "172.31.32.0/20"
-    availability_zone = "us-west-1a"
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = aws_internet_gateway.myapp-igw.id
+    }
     tags = {
-        Name: "subnet-2-default"
+        Name: "${var.env_prefix}-rtb"
     }
 }
 
-output "dev-vpc-id" {
-    value = aws_vpc.development-vpc.id
-}
-
-output "dev-subnet-id" {
-    value = aws_subnet.dev-subnet-1.id
+resource "aws_internet_gateway" "myapp-igw" {
+    vpc_id = aws_vpc.myapp-vpc.id
+    tags = {
+        Name: "${var.env_prefix}-igw"
+    }
 }
